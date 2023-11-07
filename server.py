@@ -26,11 +26,15 @@ args = {
     'learning_rate': 0.001
 }
 
+input_size = 10
+hidden_size = 5
+output_size = 1
+
 clients_in_comn_100 = ['client1', 'client2', 'client3', 'client4', 'client5',
                        'client6', 'client7', 'client8', 'client9', 'client10',
                        ]  #
 
-net = tianqi_2NN()  #  实例化神经网络
+net = tianqi_2NN(input_size, hidden_size, output_size)  #  实例化神经网络
 if torch.cuda.device_count() > 1:
     print("Let's use", torch.cuda.device_count(), "GPUs!")
     net = torch.nn.DataParallel(net)

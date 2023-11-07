@@ -19,13 +19,25 @@ class ClientsGroup(object):  #  构造边缘端集合类
 
     def dataSetBalanceAllocation(self):  #  初始化集合的内容
         index_class = getdata(self.class_num)  #  getdata是load.py里的函数
-        for i, idcs in enumerate(index_class):  #  边缘数据划分
-            #local_label, local_data = np.vstack(train_labels_shuffle[idcs]), np.vstack(train_features_shuffle[idcs])
-            #num_example = len(local_label)
+        # 获取数据的行数
+        num_rows = index_class.shape[0]     # =3000
+
+        # 打乱行索引的顺序
+        shuffled_indices = np.random.permutation(num_rows)
+
+        # 根据打乱后的行索引重新排列数组
+        shuffled_array = index_class[shuffled_indices]
+
+        # 重新变成 10 个 300×14 维的数组
+        reshaped_array = shuffled_array.reshape(10, 300, 14)
+
+        for i in range(self.class_num):
+            self.clients_set[i].train_ds = reshaped_array[i]
+
+
 
             #someone_1 = client(TensorDataset(torch.tensor(local_data, dtype=torch.float, requires_grad = True), torch.tensor.....))
-            A = i
-            B = idcs
+
 
             #self.clients_set['client{}'.format(i)] = someone_1
 
@@ -40,9 +52,11 @@ class client(object):  #  构造每个边缘类
 
 
     def localUpdate(self, localBatchSize, localepoch, Net, lossFun, opti, global_parameters):  #  本地计算函数
+        global_parameters = torch.load("global_parameters.path")
         Net.load_state_dict(global_parameters, strict = True)
         self.train_dl = DataLoader(self.train_ds, batch_size = localBatchSize, shuffle = True)
         #for epoch in range(localepoch):
+        torch.save(Net.state_dict(), "global_parameters.pth")
 
 
 
