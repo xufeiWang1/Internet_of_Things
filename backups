@@ -1,0 +1,145 @@
+#model
+#神经网络
+import numpy as np
+import pandas as pd
+from sklearn import  preprocessing
+import warnings
+
+import torch.nn as nn
+import torch.nn.functional as F
+
+class tianqi_2NN(nn.Module):  #  构建神经网络，继承自nn.Module类
+    def __init__(self):
+        super().__init__()  # 调用父类的构造函数
+        self.fc1 = nn.Linear(...)  #创造两个全连接层对象，将它们分配给fc1和fc2
+        self.fc2 = nn.Linear(...)
+
+    def forward(self,inputs):
+        tensor = F.sigmoid(self.fc1(inputs))
+        tensor = self.fc2(tensor)
+        return tensor
+
+
+
+
+
+#server
+#参数服务器
+#调用client、load、model
+# import numpy as np
+# import pandas as pd
+# from sklearn import  preprocessing
+# import warnings
+
+import os
+import argparse
+#  设定全局的参数——客户端数量、全局轮数、每个边缘端训练轮数localepoch、batchsize、learning rate等
+
+import torch.cuda
+from tqdm import  tqdm
+from torch import optim
+from clients import  ClientsGroup
+import sys
+from Models import tianqi_2NN
+from load import *
+
+net = tianqi_2NN()  #  实例化神经网络
+if torch.cuda.device_count() > 1:
+    print("Let's use", torch.cuda.device_count(), "GPUs!")
+    net = torch.nn.DataParallel(net)
+net = net.to(dev)
+
+loss_func = torch.nn.MSELoss(reduction='mean')  #  确定损失函数和优化器
+opti = optim.SGD(net.parameters(), lr = args['learning_rate'])
+
+
+myClients = ClientsGroup(dev, args['num_of_clients'])  #  实例化边缘端集合对象
+
+for i in range(1, args['num_comn']+1):  #  边缘端计算
+    print('-------------------------fedavg----------------------')
+    print('------------------------------第', i, '次训练--------------------')
+    sum_parameters = None
+    for client in tqdm(clients_in_comn_100):
+        print(client)
+        local_parameters = myClients.clients_set[client].localUpdate(args['batchsize'], args['epoch'], net, loss_func, opti, global_parameters)
+
+
+        for var in sum_parameters :  #  本地模型聚合
+            sum_parameters[var] = sum_parameters[var] + local_parameters[var] * example
+for var in global_parameters:
+    globle_parameters[var] = sum_parameters[var] / sum_example
+
+
+x = torch.tensor(all_features_test, dtype = torch.float)  #  验证拟合和预测结果
+x = x.to(dev)
+predict_1 = net(x)
+predict = predict_1.cpu().detach().numpy()
+
+
+
+
+
+#load
+#数据处理及分配
+#读取train.csv和test.csv，划分样本的特征和标签，数据编码，数据标准化，边缘端数据划分
+
+import numpy as np
+import pandas as pd
+from sklearn import  preprocessing
+import warnings
+
+all_labels_train = np.array(features_train['actual'])  #  标签   也就是要预测的温度的真实值  （划分样本的特征和标签）
+features_train = features_train.drop('actual', axis = 1)  #  在特征中去掉标签    （划分样本的特征和标签）
+features_train = pd.get_dummies(features_train)  #  独热编码  将week中的Fri、Sun等编码而不是String格式    （数据编码）
+all_features_train = preprocessing.StandardScaler().fit_transform(features_train)  #  数据标准化
+def getdata(class_num):  #  边缘端数据划分
+
+
+
+
+
+#client
+#客户端
+#调用load
+import torch
+from torch.utils.data import TensorDataset
+from torch.utils.data import DataLoader
+from load import *
+# import numpy as np
+# import pandas as pd
+# from sklearn import  preprocessing
+# import warnings
+
+class ClientsGroup(object):  #  构造边缘端集合类
+    def __init__(self, dev, class_num):
+    self.dev = dev
+    self.clients_set = {}
+    self.class_num = class_num
+    self.dataSetBalanceAllocation()
+
+def dataSetBalanceAllocation(self):  #  初始化集合的内容
+    index_class = getdata(self.class_num)
+
+
+    for i, idcs in enumerate(index_class):  #  边缘数据划分
+        local_label, local_data = np.vstack(train_labels_shuffle[idcs]), np.vstack(train_features_shuffle[idcs])
+        num_example = len(local_label)
+        someone_1 = client(TensorDataset(torch.tensor(local_data, dtype=torch,float, requires_grad = True), torch.tensor.....))
+
+
+        self.clients_set['client{}'.format(i)] = someone_1
+
+
+    class client(object):  #  构造每个边缘类
+        def __init__(self, trainDataSet, dev, num_example):
+            self.train_ds = trainDataSet
+            self.dev = dev
+            self.train_dl = None
+            self.num_example = num_example
+            self.state = {}
+
+
+    def localUpdate(self, localBatchSize, localepoch, Net, lossFun, opti, global_parameters):  #  本地计算函数
+        Net.load_state_dict(global_parameters, strict = True)
+        self.train_dl = DataLoader(self.train_ds, batch_size = localBatchSize, shuffle = True)
+        for epoch in range(localepoch):
