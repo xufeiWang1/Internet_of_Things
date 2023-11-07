@@ -51,14 +51,16 @@ class client(object):  #  构造每个边缘类
         self.state = {}
 
 
-    def localUpdate(self, localBatchSize, localepoch, Net, lossFun, opti, global_parameters):  #  本地计算函数
-        global_parameters = torch.load("global_parameters.path")
-        Net.load_state_dict(global_parameters, strict = True)
+    def localUpdate(self, localBatchSize, localepoch, Net, lossFun, opti):  #  本地计算函数
         self.train_dl = DataLoader(self.train_ds, batch_size = localBatchSize, shuffle = True)
         #for epoch in range(localepoch):
-        torch.save(Net.state_dict(), "global_parameters.pth")
 
 
 
 dev = torch.device("cpu")
 myClients = ClientsGroup(dev, 10)
+
+
+#         Net.load_state_dict(global_parameters, strict = True)
+#         global_parameters = torch.load("global_parameters.path")
+#          torch.save(Net.state_dict(), "global_parameters.pth")
