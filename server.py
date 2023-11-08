@@ -28,18 +28,6 @@ class ClientsGroup(object):  # 构造边缘端集合类
         self.class_num = class_num
         self.dataSetBalanceAllocation()
 
-    def creat_clients_net(self):
-        client1_net = tianqi_2NN('input_size', 'hidden_size', 'output_size')
-        client2_net = tianqi_2NN('input_size', 'hidden_size', 'output_size')
-        client3_net = tianqi_2NN('input_size', 'hidden_size', 'output_size')
-        client4_net = tianqi_2NN('input_size', 'hidden_size', 'output_size')
-        client5_net = tianqi_2NN('input_size', 'hidden_size', 'output_size')
-        client6_net = tianqi_2NN('input_size', 'hidden_size', 'output_size')
-        client7_net = tianqi_2NN('input_size', 'hidden_size', 'output_size')
-        client8_net = tianqi_2NN('input_size', 'hidden_size', 'output_size')
-        client9_net = tianqi_2NN('input_size', 'hidden_size', 'output_size')
-        client10_net = tianqi_2NN('input_size', 'hidden_size', 'output_size')
-
     def add_client(self, client):
         self.clients_set.add(client)
 
@@ -92,6 +80,26 @@ class ClientsGroup(object):  # 构造边缘端集合类
             localepoch = 5
             client.localUpdate(localBatchSize, localepoch, lossFun, opti)
 
+    def combineParameters(self):
+        fc1_weight = np.zeros(('input_size', 'hidden_size'))
+        fc1_bias = np.zeros(('input_size',))
+        fc2_weight = np.zeros(('hidden_size', 'output_size'))
+        fc2_bias = np.zeros(('hidden_size',))
+        for client in range(self.clients_set):
+            fc1_weight = fc1_weight + client.fc1_weight
+            fc1_bias = fc1_bias + client.fc1_bias
+            fc2_weight = fc2_weight + client.fc2_weight
+            fc2_bias = fc2_bias + client.fc2_bias
+        fc1_weight = fc1_weight / 10
+        fc1_bias = fc1_bias / 10
+        fc2_weight = fc2_weight / 10
+        fc2_bias = fc2_bias / 10
+
+
+
+
+
+
             # someone_1 = client(TensorDataset(torch.tensor(local_data, dtype=torch.float, requires_grad = True), torch.tensor.....))
 
             # self.clients_set['client{}'.format(i)] = someone_1
@@ -103,12 +111,15 @@ class client(object):  # 构造每个边缘类
         self.target_data = target_data
         self.dev = dev
         self.clientNet = clientNet
+        self.fc1_weight = None
+        self.fc1_bias = None
+        self.fc2_weight = None
+        self.fc2_bias = None
         self.train_dl = None
         self.num_example = num_example
         self.state = {}
 
     def localUpdate(self, localBatchSize, localepoch, lossFun, opti):  # 本地计算函数
-        parameters = self.clientNet.parameters()
         for epoch in range(localepoch):
             # 前向传播
             output = self.clientNet(self.train_ds)  #  会出问题么没用到localBatchSize
@@ -122,12 +133,22 @@ class client(object):  # 构造每个边缘类
             # 打印损失
             print(f"Epoch: {epoch + 1}, Loss: {loss.item()}")
 
+        # 获取参数
+        parameters = list(self.clientNet.parameters())
+        # 获取第一个线性层的权重和偏置参数
+        self.fc1_weight = parameters[0].data
+        self.fc1_bias = parameters[1].data
+
+        # 获取第二个线性层的权重和偏置参数
+        self.fc2_weight = parameters[2].data
+        self.fc2_bias = parameters[3].data
+
         # 获取更新后的参数值
-        updated_parameters = []
-        for param in parameters:
-            updated_param = param.data.clone()  # 克隆参数值
-            updated_parameters.append(updated_param)  # updated_parameters 列表中存储了更新后的参数值
-        return updated_parameters
+        # updated_parameters = []
+        # for param in parameters:
+        #     updated_param = param.data.clone()  # 克隆参数值
+        #     updated_parameters.append(updated_param)  # updated_parameters 列表中存储了更新后的参数值
+        # return updated_parameters
 
 
 #   设置全局参数
@@ -167,10 +188,6 @@ for i in range(1, args['num_comn'] + 1):  # 边缘端计算
     print('-------------------------fedavg----------------------')
     print('------------------------------第', i, '次训练--------------------')
     sum_parameters = None
-    for client in tqdm(clients_in_comn_100):
-        print(client)
-        local_parameters = myClients.clients_set[client].localUpdate(args['batchsize'], args['epoch'], net, loss_func,
-                                                                     opti, global_parameters)  # 本地参数
 
         for var in sum_parameters:  # 本地模型聚合
             sum_parameters[var] = sum_parameters[var] + local_parameters[var] * example
