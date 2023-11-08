@@ -123,7 +123,7 @@ class client(object):  # 构造每个边缘类
         for epoch in range(localepoch):
             # 前向传播
             output = self.clientNet(self.train_ds)  #  会出问题么没用到localBatchSize
-            # 计算损失
+            #  计算损失
             loss = lossFun(output, self.target_data)
             # 反向传播和参数更新
             opti.zero_grad()
