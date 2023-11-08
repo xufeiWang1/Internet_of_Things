@@ -22,11 +22,15 @@ from load import *
 
 
 class ClientsGroup(object):  # 构造边缘端集合类
-    def __init__(self, dev, class_num):
+    def __init__(self, dev, class_num, Net):
         self.dev = dev
         self.clients_set = set()
         self.class_num = class_num
-        self.dataSetBalanceAllocation()
+        self.Net = Net
+        self.fc1_weight = torch.from_numpy(np.zeros((args['hidden_size'], args['input_size']))).float()
+        self.fc1_bias = torch.from_numpy(np.zeros((args['hidden_size'],))).float()
+        self.fc2_weight = torch.from_numpy(np.zeros((args['output_size'], args['hidden_size']))).float()
+        self.fc2_bias = torch.from_numpy(np.zeros((args['output_size'],))).float()
 
     def add_client(self, client):
         self.clients_set.add(client)
@@ -74,33 +78,26 @@ class ClientsGroup(object):  # 构造边缘端集合类
             client.num_example = client.train_ds.shape[0]
             client.clientNet = tianqi_2NN(args['input_size'], args['hidden_size'], args['output_size'])
 
-    def updateSet(self, Net, lossFun, opti):
-        for client in range(self.clients_set):
+    def updateSet(self, Net, lossFun):
+        for client in self.clients_set:
             localBatchSize = client.train_ds.shape[0]
             localepoch = 5
-            client.localUpdate(localBatchSize, localepoch, lossFun, opti)
+            client.localUpdate(localBatchSize, localepoch, lossFun)
 
     def combineParameters(self):
-        fc1_weight = np.zeros((args['input_size'], args['hidden_size']))
-        fc1_bias = np.zeros((args['input_size'],))
-        fc2_weight = np.zeros((args['hidden_size'], args['output_size']))
-        fc2_bias = np.zeros((args['hidden_size'],))
-        for client in range(self.clients_set):
-            fc1_weight = fc1_weight + client.fc1_weight
-            fc1_bias = fc1_bias + client.fc1_bias
-            fc2_weight = fc2_weight + client.fc2_weight
-            fc2_bias = fc2_bias + client.fc2_bias
-        fc1_weight = fc1_weight / 10
-        fc1_bias = fc1_bias / 10
-        fc2_weight = fc2_weight / 10
-        fc2_bias = fc2_bias / 10
+        for client in self.clients_set:
+            self.fc1_weight = self.fc1_weight + client.fc1_weight
+            self.fc1_bias = self.fc1_bias + client.fc1_bias
+            self.fc2_weight = self.fc2_weight + client.fc2_weight
+            self.fc2_bias = self.fc2_bias + client.fc2_bias
+        self.fc1_weight = self.fc1_weight / 10
+        self.fc1_bias = self.fc1_bias / 10
+        self.fc2_weight = self.fc2_weight / 10
+        self.fc2_bias = self.fc2_bias / 10
 
     def send_parameter(self):
         for client in range(self.clients_set):
-            client.fc1_weight = self.fc1_weight
-            client.fc1_bias = self.fc1_bias
-            client.fc2_weight = self.fc2_weight
-            client.fc2_bias = self.fc2_bias
+            client.receiveParameters(self.fc1_weight, self.fc1_bias, self.fc2_weight, self.fc2_bias)
 
 
     # someone_1 = client(TensorDataset(torch.tensor(local_data, dtype=torch.float, requires_grad = True), torch.tensor.....))
@@ -122,12 +119,14 @@ class client(object):  # 构造每个边缘类
         self.num_example = num_example
         self.state = {}
 
-    def localUpdate(self, localBatchSize, localepoch, lossFun, opti):  # 本地计算函数
+    def localUpdate(self, localBatchSize, localepoch, lossFun):  # 本地计算函数
+        opti = optim.SGD(self.clientNet.parameters(), lr=args['learning_rate'])
         for epoch in range(localepoch):
+            localparameters = list(self.clientNet.parameters())
             # 前向传播
             output = self.clientNet(self.train_ds)  #  会出问题么没用到localBatchSize
             #  计算损失
-            loss = lossFun(output, self.target_data)
+            loss = lossFun(output, torch.from_numpy(self.target_data).float())
             # 反向传播和参数更新
             opti.zero_grad()
             loss.backward()
@@ -146,6 +145,19 @@ class client(object):  # 构造每个边缘类
         self.fc2_weight = parameters[2].data
         self.fc2_bias = parameters[3].data
 
+
+    def receiveParameters(self, fc1_weight, fc1_bias, fc2_weight, fc2_bias):
+        params = {
+            'fc1.weight': fc1_weight,
+            'fc1.bias': fc1_bias,
+            'fc2.weight': fc2_weight,
+            'fc2.bias': fc2_bias
+        }
+
+        # 将参数传输给新的神经网络
+        self.clientNet.load_state_dict(params)
+
+
         # 获取更新后的参数值
         # updated_parameters = []
         # for param in parameters:
@@ -161,7 +173,7 @@ args = {
     'batchsize': 32,
     'epoch': 5,
     'learning_rate': 0.001,
-    'input_size': 10,
+    'input_size': 13,
     'hidden_size': 5,
     'output_size': 1
 }
@@ -185,13 +197,13 @@ net = net.to(dev)
 loss_func = torch.nn.MSELoss(reduction='mean')  # 确定损失函数和优化器
 opti = optim.SGD(net.parameters(), lr=args['learning_rate'])
 
-myClients = ClientsGroup(dev, args['num_of_clients'])  # 实例化边缘端集合对象
+myClients = ClientsGroup(dev, args['num_of_clients'], net)  # 实例化边缘端集合对象
 
 for i in range(1, args['num_comn'] + 1):  # 边缘端计算
     print('-------------------------fedavg----------------------')
     print('------------------------------第', i, '次训练--------------------')
     myClients.dataSetBalanceAllocation()
-    myClients.updateSet(net, loss_func, opti)
+    myClients.updateSet(net, loss_func)
     myClients.combineParameters()
 
 test_data = getTestData()
