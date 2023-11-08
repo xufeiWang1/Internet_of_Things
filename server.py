@@ -58,6 +58,12 @@ class ClientsGroup(object):  # 构造边缘端集合类
         self.add_client(client9)
         self.add_client(client10)
 
+    def initnet(self):
+        for i, client in enumerate(self.clients_set):
+            client.clientNet = tianqi_2NN(args['input_size'], args['hidden_size'], args['output_size'])
+
+
+
     def dataSetBalanceAllocation(self):  # 初始化集合的内容
         trainData = getdata(self.class_num)  # getdata是load.py里的函数
         # 获取数据的行数
@@ -69,14 +75,13 @@ class ClientsGroup(object):  # 构造边缘端集合类
         # 重新变成 10 个 300×14 维的数组
         reshaped_array = shuffled_array.reshape(10, 300, 14)
 
-        self.client_create()
+
 
         for i, client in enumerate(self.clients_set):
             client.train_ds = reshaped_array[i, :, :13]
             client.target_data = reshaped_array[i, :, 13:]
             client.dev = self.dev
             client.num_example = client.train_ds.shape[0]
-            client.clientNet = tianqi_2NN(args['input_size'], args['hidden_size'], args['output_size'])
 
     def updateSet(self, Net, lossFun):
         for client in self.clients_set:
@@ -96,7 +101,7 @@ class ClientsGroup(object):  # 构造边缘端集合类
         self.fc2_bias = self.fc2_bias / 10
 
     def send_parameter(self):
-        for client in range(self.clients_set):
+        for client in self.clients_set:
             client.receiveParameters(self.fc1_weight, self.fc1_bias, self.fc2_weight, self.fc2_bias)
 
 
@@ -198,13 +203,15 @@ loss_func = torch.nn.MSELoss(reduction='mean')  # 确定损失函数和优化器
 opti = optim.SGD(net.parameters(), lr=args['learning_rate'])
 
 myClients = ClientsGroup(dev, args['num_of_clients'], net)  # 实例化边缘端集合对象
-
+myClients.client_create()
+myClients.initnet()
 for i in range(1, args['num_comn'] + 1):  # 边缘端计算
     print('-------------------------fedavg----------------------')
     print('------------------------------第', i, '次训练--------------------')
     myClients.dataSetBalanceAllocation()
     myClients.updateSet(net, loss_func)
     myClients.combineParameters()
+    myClients.send_parameter()
 
 test_data = getTestData()
 x = torch.tensor(test_data, dtype=torch.float)  # 验证拟合和预测结果
