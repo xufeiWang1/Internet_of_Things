@@ -55,24 +55,24 @@ class ClientsGroup(object):  # 构造边缘端集合类
         self.add_client(client10)
 
     def dataSetBalanceAllocation(self):  # 初始化集合的内容
-        index_class = getdata(self.class_num)  # getdata是load.py里的函数
+        trainData = getdata(self.class_num)  # getdata是load.py里的函数
         # 获取数据的行数
-        num_rows = index_class.shape[0]  # =3000
+        num_rows = trainData.shape[0]  # =3000
         # 打乱行索引的顺序
         shuffled_indices = np.random.permutation(num_rows)
         # 根据打乱后的行索引重新排列数组
-        shuffled_array = index_class[shuffled_indices]
+        shuffled_array = trainData[shuffled_indices]
         # 重新变成 10 个 300×14 维的数组
         reshaped_array = shuffled_array.reshape(10, 300, 14)
 
         self.client_create()
 
-        for client in range(self.clients_set):
+        for i, client in enumerate(self.clients_set):
             client.train_ds = reshaped_array[i, :, :13]
             client.target_data = reshaped_array[i, :, 13:]
             client.dev = self.dev
             client.num_example = client.train_ds.shape[0]
-            client.clientNet = tianqi_2NN('input_size', 'hidden_size', 'output_size')
+            client.clientNet = tianqi_2NN(args['input_size'], args['hidden_size'], args['output_size'])
 
     def updateSet(self, Net, lossFun, opti):
         for client in range(self.clients_set):
@@ -81,10 +81,10 @@ class ClientsGroup(object):  # 构造边缘端集合类
             client.localUpdate(localBatchSize, localepoch, lossFun, opti)
 
     def combineParameters(self):
-        fc1_weight = np.zeros(('input_size', 'hidden_size'))
-        fc1_bias = np.zeros(('input_size',))
-        fc2_weight = np.zeros(('hidden_size', 'output_size'))
-        fc2_bias = np.zeros(('hidden_size',))
+        fc1_weight = np.zeros((args['input_size'], args['hidden_size']))
+        fc1_bias = np.zeros((args['input_size'],))
+        fc2_weight = np.zeros((args['hidden_size'], args['output_size']))
+        fc2_bias = np.zeros((args['hidden_size'],))
         for client in range(self.clients_set):
             fc1_weight = fc1_weight + client.fc1_weight
             fc1_bias = fc1_bias + client.fc1_bias
@@ -95,12 +95,15 @@ class ClientsGroup(object):  # 构造边缘端集合类
         fc2_weight = fc2_weight / 10
         fc2_bias = fc2_bias / 10
 
+    def send_parameter(self):
+        for client in range(self.clients_set):
+            client.fc1_weight = self.fc1_weight
+            client.fc1_bias = self.fc1_bias
+            client.fc2_weight = self.fc2_weight
+            client.fc2_bias = self.fc2_bias
 
 
-
-
-
-            # someone_1 = client(TensorDataset(torch.tensor(local_data, dtype=torch.float, requires_grad = True), torch.tensor.....))
+    # someone_1 = client(TensorDataset(torch.tensor(local_data, dtype=torch.float, requires_grad = True), torch.tensor.....))
 
             # self.clients_set['client{}'.format(i)] = someone_1
 
@@ -167,8 +170,8 @@ args = {
 #                        'client6', 'client7', 'client8', 'client9', 'client10',
 #                        ]  #
 
-net = tianqi_2NN('input_size', 'hidden_size', 'output_size')  # 实例化神经网络
-if torch.cuda.device_count() > 1:
+net = tianqi_2NN(args['input_size'], args['hidden_size'], args['output_size'])  # 实例化神经网络
+if torch.cuda.device_count() >= 1:
     print("Let's use", torch.cuda.device_count(), "GPUs!")
     net = torch.nn.DataParallel(net)
 
@@ -187,14 +190,12 @@ myClients = ClientsGroup(dev, args['num_of_clients'])  # 实例化边缘端集�
 for i in range(1, args['num_comn'] + 1):  # 边缘端计算
     print('-------------------------fedavg----------------------')
     print('------------------------------第', i, '次训练--------------------')
-    sum_parameters = None
+    myClients.dataSetBalanceAllocation()
+    myClients.updateSet(net, loss_func, opti)
+    myClients.combineParameters()
 
-        for var in sum_parameters:  # 本地模型聚合
-            sum_parameters[var] = sum_parameters[var] + local_parameters[var] * example
-    for var in global_parameters:
-        global_parameters[var] = sum_parameters[var] / sum_example
-
-x = torch.tensor(all_features_test, dtype=torch.float)  # 验证拟合和预测结果
+test_data = getTestData()
+x = torch.tensor(test_data, dtype=torch.float)  # 验证拟合和预测结果
 x = x.to(dev)  # 将输入数据和目标数据移动到设备上
 predict_1 = net(x)  # __call__()方法像函数一样调用对象
 predict = predict_1.cpu().detach().numpy()
