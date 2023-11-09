@@ -22,24 +22,23 @@ args = {
     'output_size': 1
 }
 
-
-
-tianqi_2NN(args['input_size'], args['hidden_size'], args['output_size'])  # 实例化神经网络
-if torch.cuda.device_count() >= 1:
-    print("Let's use", torch.cuda.device_count(), "GPUs!")
-    net = torch.nn.DataParallel(net)
-
 if torch.cuda.is_available():
     dev = torch.device("cuda")
 else:
     dev = torch.device("cpu")
 
-net = net.to(dev)
+myClients = ClientsGroup(dev, args['num_of_clients'])  # 实例化边缘端集合对象
 
-loss_func = torch.nn.MSELoss(reduction='mean')  # 确定损失函数和优化器
-opti = optim.SGD(net.parameters(), lr=args['learning_rate'])
 
-myClients = ClientsGroup(dev, args['num_of_clients'],net)  # 实例化边缘端集合对象
+if torch.cuda.device_count() >= 1:
+    print("Let's use", torch.cuda.device_count(), "GPUs!")
+    myClients.Net = torch.nn.DataParallel(myClients.Net)
+
+
+
+myClients.Net = myClients.Net.to(dev)
+
+
 # myClients.client_create()
 for i in range(1, args['num_comn'] + 1):  # 边缘端计算
     print('-------------------------fedavg----------------------')
