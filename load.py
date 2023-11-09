@@ -8,7 +8,7 @@ from sklearn.model_selection import StratifiedKFold
 import warnings
 
 
-def getdata(class_num):  #  边缘端数据划分
+def getdata():  #  边缘端数据划分
 
     features_train = pd.read_csv('train.csv')
 

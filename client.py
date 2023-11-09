@@ -32,34 +32,18 @@ class ClientsGroup(object):  # 构造边缘端集合类
         self.fc1_bias = torch.from_numpy(np.zeros((args['hidden_size'],))).float()
         self.fc2_weight = torch.from_numpy(np.zeros((args['output_size'], args['hidden_size']))).float()
         self.fc2_bias = torch.from_numpy(np.zeros((args['output_size'],))).float()
-
-    # def add_client(self, client):
-    #     self.clients_set.add(client)
-
-
-    def client_create(self):
         for i in range(self.class_num):
             Client = client()
+            Client.clientNet = tianqi_2NN(args['input_size'], args['hidden_size'], args['output_size'])
             self.clients_set.add(Client)
-
-    def initnet(self):
-        for i, client in enumerate(self.clients_set):
-            client.clientNet = tianqi_2NN(args['input_size'], args['hidden_size'], args['output_size'])
-
 
 
     def dataSetBalanceAllocation(self):  # 初始化集合的内容
-        trainData = getdata(self.class_num)  # getdata是load.py里的函数
-        # 获取数据的行数
-        num_rows = trainData.shape[0]  # =3000
-        # 打乱行索引的顺序
-        shuffled_indices = np.random.permutation(num_rows)
-        # 根据打乱后的行索引重新排列数组
-        shuffled_array = trainData[shuffled_indices]
-        # 重新变成 10 个 300×14 维的数组
-        reshaped_array = shuffled_array.reshape(10, 300, 14)
-
-
+        trainData = getdata()  # getdata是load.py里的函数
+        num_rows = trainData.shape[0]  # =3000  # 获取数据的行数
+        shuffled_indices = np.random.permutation(num_rows)          # 打乱行索引的顺序
+        shuffled_array = trainData[shuffled_indices]          # 根据打乱后的行索引重新排列数组
+        reshaped_array = shuffled_array.reshape(10, 300, 14)           # 重新变成 10 个 300×14 维的数组
 
         for i, client in enumerate(self.clients_set):
             client.train_ds = reshaped_array[i, :, :13]
@@ -67,7 +51,7 @@ class ClientsGroup(object):  # 构造边缘端集合类
             client.dev = self.dev
             client.num_example = client.train_ds.shape[0]
 
-    def updateSet(self, Net, lossFun):
+    def updateSet(self, lossFun):
         for client in self.clients_set:
             localBatchSize = client.train_ds.shape[0]
             localepoch = 5
