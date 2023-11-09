@@ -16,7 +16,10 @@ class tianqi_2NN(nn.Module):  #  构建神经网络，继承自nn.Module类
         self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self,inputs):
-        tensor = F.sigmoid(self.fc1(torch.from_numpy(inputs).float()))
+        if isinstance(inputs, np.ndarray):
+            tensor = F.sigmoid(self.fc1(torch.from_numpy(inputs).float()))
+        elif isinstance(inputs, torch.Tensor):
+            tensor = F.sigmoid(self.fc1(inputs))
         tensor = self.fc2(tensor)
         return tensor
 

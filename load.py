@@ -29,6 +29,7 @@ def getTestData():
     features_test = testData.drop('actual', axis=1)  # 在特征中去掉标签    （划分样本的特征和标签）
     features_test = pd.get_dummies(features_test)  # 独热编码  将week中的Fri、Sun等编码而不是String格式    （数据编码）
     all_features_test = preprocessing.StandardScaler().fit_transform(features_test)  # 数据标准化
+    all_labels_test = np.expand_dims(all_labels_test, axis=1)
 
     # all_labels_train和all_features_train就是要用的
     all_data_test = np.concatenate((all_features_test, all_labels_test), axis=1)

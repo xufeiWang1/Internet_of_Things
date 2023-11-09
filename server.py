@@ -215,6 +215,12 @@ for i in range(1, args['num_comn'] + 1):  # 边缘端计算
 
 test_data = getTestData()
 x = torch.tensor(test_data, dtype=torch.float)  # 验证拟合和预测结果
+# x = x.numpy()
 x = x.to(dev)  # 将输入数据和目标数据移动到设备上
-predict_1 = net(x)  # __call__()方法像函数一样调用对象
+predict_1 = net(x[:, :13])  # __call__()方法像函数一样调用对象
 predict = predict_1.cpu().detach().numpy()
+loss_test = loss_func(predict_1, x[:, 13])
+print(f" Loss: {loss_test.item()}")
+# output = self.clientNet(self.train_ds)  # 会出问题么没用到localBatchSize
+# #  计算损失
+# loss = lossFun(output, torch.from_numpy(self.target_data).float())
