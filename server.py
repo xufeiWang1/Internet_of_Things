@@ -161,6 +161,10 @@ class client(object):  # 构造每个边缘类
 
         # 将参数传输给新的神经网络
         self.clientNet.load_state_dict(params)
+        self.fc1_weight = fc1_weight
+        self.fc1_bias = fc1_bias
+        self.fc2_weight = fc2_weight
+        self.fc2_bias = fc2_bias
 
 
         # 获取更新后的参数值
