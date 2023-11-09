@@ -32,8 +32,9 @@ class ClientsGroup(object):  # 构造边缘端集合类
         self.opti = optim.SGD(self.Net.parameters(), lr=args['learning_rate'])
 
         for i in range(self.class_num):
-            Client = client()
+            Client = client(self.dev)
             Client.localNet = tianqi_2NN(args['input_size'], args['hidden_size'], args['output_size'])
+            Client.opti = optim.SGD(Client.localNet.parameters(), lr=args['learning_rate'])
             self.clients_set.add(Client)
 
 
@@ -54,12 +55,12 @@ class ClientsGroup(object):  # 构造边缘端集合类
         for client in self.clients_set:
             localBatchSize = client.train_ds.shape[0]
             localepoch = 5
-            client.localUpdate(localBatchSize, localepoch)
+            client.localUpdate(localepoch)
 
     def combineParameters(self):
         for i, clie in enumerate(self.clients_set):
             localparameters = list(clie.localNet.parameters())
-            if 1==0 :
+            if i == 0 :
                 localparameters_dict = {'local_fc1_weight': localparameters[0].data, 'local_fc1_bias': localparameters[1].data,
                                         'local_fc2_weight': localparameters[2].data, 'local_fc2_bias': localparameters[3].data}
             else :
@@ -67,35 +68,39 @@ class ClientsGroup(object):  # 构造边缘端集合类
                 localparameters_dict['local_fc1_bias'] = localparameters_dict['local_fc1_bias']+ localparameters[1].data
                 localparameters_dict['local_fc2_weight'] = localparameters_dict['local_fc2_weight']+ localparameters[2].data
                 localparameters_dict['local_fc2_bias'] = localparameters_dict['local_fc2_bias']+ localparameters[3].data
+        localparameters_dict['local_fc1_weight'] = localparameters_dict['local_fc1_weight']/ 10
+        localparameters_dict['local_fc1_bias'] = localparameters_dict['local_fc1_bias']/ 10
+        localparameters_dict['local_fc2_weight'] = localparameters_dict['local_fc2_weight']/ 10
+        localparameters_dict['local_fc2_bias'] = localparameters_dict['local_fc2_bias']/ 10
+        params = {
+            'module.fc1.weight': localparameters_dict['local_fc1_weight'],
+            'module.fc1.bias': localparameters_dict['local_fc1_bias'],
+            'module.fc2.weight': localparameters_dict['local_fc2_weight'],
+            'module.fc2.bias': localparameters_dict['local_fc2_bias']
+        }
+        self.Net.load_state_dict(params)
+        params = {
+            'fc1.weight': localparameters_dict['local_fc1_weight'],
+            'fc1.bias': localparameters_dict['local_fc1_bias'],
+            'fc2.weight': localparameters_dict['local_fc2_weight'],
+            'fc2.bias': localparameters_dict['local_fc2_bias']
+        }
+        for clie in self.clients_set:
+            clie.localNet.load_state_dict(params)
 
-
-
-            globalfc1_weight = self.fc1_weight + client.fc1_weight
-            globalfc1_bias = self.fc1_bias + client.fc1_bias
-            globalfc2_weight = self.fc2_weight + client.fc2_weight
-            globalfc2_bias = self.fc2_bias + client.fc2_bias
-        self.fc1_weight = self.fc1_weight / 10
-        self.fc1_bias = self.fc1_bias / 10
-        self.fc2_weight = self.fc2_weight / 10
-        self.fc2_bias = self.fc2_bias / 10
-
-    def send_parameter(self):
-        for client in self.clients_set:
-            client.receiveParameters(self.fc1_weight, self.fc1_bias, self.fc2_weight, self.fc2_bias)
 
 class client(object):  # 构造每个边缘类
     def __init__(self,  dev):
-        self.train_ds
-        self.target_data
+        self.train_ds = None
+        self.target_data = None
         self.dev = dev
-        self.localNet
-        self.num_example
+        self.localNet = None
+        self.num_example = None
         self.locallossfun = torch.nn.MSELoss(reduction='mean')  # 确定损失函数和优化器
-        self.opti = optim.SGD(self.localNet.parameters(), lr=args['learning_rate'])
+        self.opti = None
 
-    def localUpdate(self, localBatchSize, localepoch):  # 本地计算函数
+    def localUpdate(self, localepoch):  # 本地计算函数
         for epoch in range(localepoch):
-            localparameters = list(self.localNet.parameters())
             # 前向传播
             output = self.localNet(self.train_ds)  # 会出问题么没用到localBatchSize
             #  计算损失
@@ -108,27 +113,5 @@ class client(object):  # 构造每个边缘类
             # 打印损失
             print(f"Epoch: {epoch + 1}, Loss: {loss.item()}")
 
-        # 获取参数
-        parameters = list(self.localNet.parameters())
-        # 获取第一个线性层的权重和偏置参数
-        self.fc1_weight = parameters[0].data
-        self.fc1_bias = parameters[1].data
 
-        # 获取第二个线性层的权重和偏置参数
-        self.fc2_weight = parameters[2].data
-        self.fc2_bias = parameters[3].data
 
-    def receiveParameters(self, fc1_weight, fc1_bias, fc2_weight, fc2_bias):
-        params = {
-            'fc1.weight': fc1_weight,
-            'fc1.bias': fc1_bias,
-            'fc2.weight': fc2_weight,
-            'fc2.bias': fc2_bias
-        }
-
-        # 将参数传输给新的神经网络
-        self.localNet.load_state_dict(params)
-        self.fc1_weight = fc1_weight
-        self.fc1_bias = fc1_bias
-        self.fc2_weight = fc2_weight
-        self.fc2_bias = fc2_bias

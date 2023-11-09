@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from server import net
+from server import *
 from load import *
 import pandas as pd
 import torch.cuda
@@ -28,8 +28,11 @@ dates1 = [f"{int(year)}/{int(month)}/{int(day)}" for year, month, day in zip(yea
 predict_data = getdata()
 x = torch.tensor(predict_data, dtype=torch.float)  # 验证拟合和预测结果
 # x = x.to(dev)  # 将输入数据和目标数据移动到设备上
-temperatures2  = net(x[:, :13])  # __call__()方法像函数一样调用对象
+temperatures2  = myClients.Net(x[:, :13])  # __call__()方法像函数一样调用对象
+temperatures2 = temperatures2.cpu()
 
+# 将张量转换为NumPy数组
+temperatures2 = temperatures2.detach().numpy()
 # 绘制折线图
 plt.xticks([])
 plt.plot(dates1, temperatures1, label = 'true temperature')
