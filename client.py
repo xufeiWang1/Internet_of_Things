@@ -33,31 +33,14 @@ class ClientsGroup(object):  # 构造边缘端集合类
         self.fc2_weight = torch.from_numpy(np.zeros((args['output_size'], args['hidden_size']))).float()
         self.fc2_bias = torch.from_numpy(np.zeros((args['output_size'],))).float()
 
-    def add_client(self, client):
-        self.clients_set.add(client)
+    # def add_client(self, client):
+    #     self.clients_set.add(client)
 
 
     def client_create(self):
-        client1 = client()
-        client2 = client()
-        client3 = client()
-        client4 = client()
-        client5 = client()
-        client6 = client()
-        client7 = client()
-        client8 = client()
-        client9 = client()
-        client10 = client()
-        self.add_client(client1)
-        self.add_client(client2)
-        self.add_client(client3)
-        self.add_client(client4)
-        self.add_client(client5)
-        self.add_client(client6)
-        self.add_client(client7)
-        self.add_client(client8)
-        self.add_client(client9)
-        self.add_client(client10)
+        for i in range(self.class_num):
+            Client = client()
+            self.clients_set.add(Client)
 
     def initnet(self):
         for i, client in enumerate(self.clients_set):
