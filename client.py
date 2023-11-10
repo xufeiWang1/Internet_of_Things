@@ -16,7 +16,7 @@ args = {
     'num_comn': 10,
     'batchsize': 32,
     'epoch': 5,
-    'learning_rate': 0.001,
+    'learning_rate': 0.01,
     'input_size': 13,
     'hidden_size': 5,
     'output_size': 1
