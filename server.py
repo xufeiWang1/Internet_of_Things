@@ -13,12 +13,11 @@ from load import *
 #   设置全局参数
 args = {
     'num_of_clients': 10,
-    'num_comn': 10,
-    'batchsize': 32,
+    'num_comn': 30,
     'epoch': 5,
     'learning_rate': 0.001,
     'input_size': 13,
-    'hidden_size': 5,
+    'hidden_size': 25,
     'output_size': 1
 }
 

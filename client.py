@@ -13,12 +13,11 @@ from Model import tianqi_2NN
 # import warnings
 args = {
     'num_of_clients': 10,
-    'num_comn': 10,
-    'batchsize': 32,
+    'num_comn': 30,
     'epoch': 5,
-    'learning_rate': 0.01,
+    'learning_rate': 0.001,
     'input_size': 13,
-    'hidden_size': 5,
+    'hidden_size': 25,
     'output_size': 1
 }
 
@@ -68,10 +67,10 @@ class ClientsGroup(object):  # 构造边缘端集合类
                 localparameters_dict['local_fc1_bias'] = localparameters_dict['local_fc1_bias']+ localparameters[1].data
                 localparameters_dict['local_fc2_weight'] = localparameters_dict['local_fc2_weight']+ localparameters[2].data
                 localparameters_dict['local_fc2_bias'] = localparameters_dict['local_fc2_bias']+ localparameters[3].data
-        localparameters_dict['local_fc1_weight'] = localparameters_dict['local_fc1_weight']/ 10
-        localparameters_dict['local_fc1_bias'] = localparameters_dict['local_fc1_bias']/ 10
-        localparameters_dict['local_fc2_weight'] = localparameters_dict['local_fc2_weight']/ 10
-        localparameters_dict['local_fc2_bias'] = localparameters_dict['local_fc2_bias']/ 10
+        localparameters_dict['local_fc1_weight'] = localparameters_dict['local_fc1_weight']/ self.class_num
+        localparameters_dict['local_fc1_bias'] = localparameters_dict['local_fc1_bias']/ self.class_num
+        localparameters_dict['local_fc2_weight'] = localparameters_dict['local_fc2_weight']/ self.class_num
+        localparameters_dict['local_fc2_bias'] = localparameters_dict['local_fc2_bias']/ self.class_num
         params = {
             'module.fc1.weight': localparameters_dict['local_fc1_weight'],
             'module.fc1.bias': localparameters_dict['local_fc1_bias'],

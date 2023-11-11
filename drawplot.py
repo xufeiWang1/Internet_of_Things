@@ -7,7 +7,6 @@ from matplotlib.dates import DateFormatter, YearLocator
 
 
 
-# 假设你的数据存储在一个名为data的二维数组中，形状为(3000, 4)，其中每列分别表示年、月、日和温度
 trainxlable = pd.read_csv('train.csv')
 
 trainxlable.rename(columns={"\ufeffyear": "year"}, inplace=True)
@@ -35,14 +34,41 @@ temperatures2 = temperatures2.cpu()
 temperatures2 = temperatures2.detach().numpy()
 # 绘制折线图
 plt.xticks([])
-plt.plot(dates1, temperatures1, label = 'true temperature')
-plt.plot(dates1, temperatures2, label = 'predict temperature')
+plt.scatter(dates1, temperatures1, label = 'true temperature')
+plt.scatter(dates1, temperatures2, label = 'predict temperature')
+
+
+#   接下来画测试集预测曲线
+testlable = pd.read_csv('test.csv')
+
+# trainxlable.rename(columns={"\ufeffyear": "year"}, inplace=True)
+# 提取年、月、日和温度数据
+temperaturesTestTrue = np.array(testlable['actual'])
+
+
+monthsTest = np.array(testlable['month'])
+daysTest = np.array(testlable['day'])
+yearsTest = np.array(testlable['year'])
+
+# 创建日期字符串，包含年份、月份和日期
+datesTest = [f"{int(year)}/{int(month)}/{int(day)}" for year, month, day in zip(yearsTest, monthsTest, daysTest)]
+predict_test = getTestData()
+x = torch.tensor(predict_test, dtype=torch.float)  # 验证拟合和预测结果
+# x = x.to(dev)  # 将输入数据和目标数据移动到设备上
+temperatures_test  = myClients.Net(x[:, :13])  # __call__()方法像函数一样调用对象
+temperatures_test = temperatures_test.cpu()
+# 将张量转换为NumPy数组
+temperatures_test = temperatures_test.detach().numpy()
+# 绘制折线图
+plt.xticks([])
+plt.scatter(datesTest, temperaturesTestTrue, label = 'true test temperature')
+plt.scatter(datesTest, temperatures_test, label = 'predict test temperature')
 
 # 设置横轴刻度为年份
 
 
 # 添加标题和轴标签
-plt.title('Temperature Variation')
+plt.title('fitting results')
 plt.xlabel('Year')
 plt.ylabel('Temperature')
 # 添加图例
@@ -50,31 +76,4 @@ plt.legend()
 # 显示图形
 plt.show()
 
-# # 创建示例数据
-# x = [1, 2, 3, 4, 5]
-# y = [2, 4, 6, 8, 10]
-#
-# # 绘制折线图
-# plt.plot(x, y)
-#
-# # 添加标题和轴标签
-# plt.title('过去的真实温度和拟合温度')
-# plt.xlabel('日期')
-# plt.ylabel('最高温度（F：华氏）')
-#
-#
-# # 显示图形
-# plt.show()
-#
-#
-#
-#
-# plt.plot(x, y)
-#
-# # 添加标题和轴标签
-# plt.title('未来的真实温度和拟合温度')
-# plt.xlabel('日期')
-# plt.ylabel('最高温度（F：华氏）')
-#
-# # 显示图形
-# plt.show()
+
